@@ -10,6 +10,7 @@ set( CMAKE_BUILD_TYPE Release )
 
 find_package( ZLIB REQUIRED )
 include_directories( ${ZLIB_INCLUDE_DIRS} )
+add_definitions( -DHAVE_ZLIB )
 
 find_package( OpenSSL REQUIRED )
 include_directories( ${OPENSSL_INCLUDE_DIR} )

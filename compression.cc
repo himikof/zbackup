@@ -105,6 +105,112 @@ public:
   std::string getName() const { return "lzma"; }
 };
 
+// ZLIB
+
+#ifdef HAVE_ZLIB
+
+#define ZLIB_CONST
+
+#include <zlib.h>
+
+class ZlibEnDecoder : public EnDecoder
+{
+protected:
+  z_stream strm;
+public:
+  ZlibEnDecoder()
+  {
+    strm.zalloc = Z_NULL;
+    strm.zfree  = Z_NULL;
+    strm.opaque = Z_NULL;
+  }
+
+  void setInput( const void* data, size_t size )
+  {
+    strm.next_in  = (const uint8_t *) data;
+    strm.avail_in = size;
+  }
+
+  void setOutput( void* data, size_t size )
+  {
+    strm.next_out  = (uint8_t *) data;
+    strm.avail_out = size;
+  }
+
+  size_t getAvailableInput()
+  {
+    return strm.avail_in;
+  }
+
+  size_t getAvailableOutput()
+  {
+    return strm.avail_out;
+  }
+
+  ~ZlibEnDecoder()
+  {
+    deflateEnd( &strm );
+  }
+};
+
+class ZlibEncoder : public ZlibEnDecoder
+{
+public:
+  ZlibEncoder()
+  {
+    const uint32_t compressionLevel = 9;
+    int ret = deflateInit( &strm, compressionLevel );
+    CHECK( ret == Z_OK, "deflateInit error: %d", ret );
+  }
+
+  bool process( bool finish )
+  {
+    int ret = deflate( &strm, ( finish ? Z_FINISH : Z_NO_FLUSH ) );
+
+    CHECK( ret == Z_OK || ret == Z_STREAM_END, "deflate error: %d", ret );
+
+    return ( ret == Z_STREAM_END );
+  }
+};
+
+class ZlibDecoder : public ZlibEnDecoder
+{
+public:
+  ZlibDecoder()
+  {
+    strm.next_in = Z_NULL;
+    strm.avail_in = 0;
+    int ret = inflateInit( &strm );
+    CHECK( ret == Z_OK,"inflateInit error: %d", ret );
+  }
+
+  bool process( bool finish )
+  {
+    int ret = inflate( &strm, ( finish ? Z_FINISH : Z_NO_FLUSH ) );
+
+    CHECK( ret == Z_OK || ret == Z_STREAM_END, "inflate error: %d", (int) ret );
+
+    return ( ret == Z_STREAM_END );
+  }
+};
+
+class ZlibCompression : public CompressionMethod
+{
+public:
+  sptr<EnDecoder> createEncoder() const
+  {
+    return new ZlibEncoder();
+  }
+
+  sptr<EnDecoder> createDecoder() const
+  {
+    return new ZlibDecoder();
+  }
+
+  std::string getName() const { return "zlib"; }
+};
+
+#endif // HAVE_ZLIB
 
 // LZO
 
@@ -587,6 +693,9 @@ static const_sptr<CompressionMethod> const compressions[] = {
   new LZMACompression(),
 # ifdef HAVE_LIBLZO
   new LZO1X_1_Compression(),
+# endif
+# ifdef HAVE_ZLIB
+  new ZlibCompression(),
 # endif
   // NULL entry marks end of list. Don't remove it!
   NULL

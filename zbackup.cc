@@ -452,6 +452,19 @@ int main( int argc, char *argv[] )
           Compression::CompressionMethod::defaultCompression = lzma;
         }
         else
+        if ( strcmp( argv[ x ], "zlib" ) == 0 )
+        {
+          const_sptr<Compression::CompressionMethod> zlib = Compression::CompressionMethod::findCompression( "zlib" );
+          if ( !zlib )
+          {
+            fprintf( stderr, "zbackup is compiled without zlib support, but the code "
+              "would support it. If you install zlib (including development files) "
+              "and recompile zbackup, you can use zlib compression.\n" );
+            return EXIT_FAILURE;
+          }
+          Compression::CompressionMethod::defaultCompression = zlib;
+        }
+        else
         if ( strcmp( argv[ x ], "lzo" ) == 0 )
         {
           const_sptr<Compression::CompressionMethod> lzo = Compression::CompressionMethod::findCompression( "lzo1x_1" );
@@ -498,7 +511,7 @@ int main( int argc, char *argv[] )
 "         --cache-size <number> MB (default is %zu)\n"
 "         --exchange [backups|bundles|index] (can be\n"
 "          specified multiple times)\n"
-"         --compression <compression> <lzma|lzo> (default is lzma)\n"
+"         --compression <compression> <lzma|zlib|lzo> (default is lzma)\n"
 "         --help|-h show this message\n"
 "  Commands:\n"
 "    init <storage path> - initializes new storage;\n"
